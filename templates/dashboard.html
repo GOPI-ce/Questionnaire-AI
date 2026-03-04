@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — QuestionnaireAI{% endblock %}
+
+{% block extra_head %}
+<style>
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.project-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px;
+  text-decoration: none; color: var(--text);
+  display: block; transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.project-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; background: linear-gradient(90deg, var(--accent2), var(--accent));
+  opacity: 0; transition: opacity 0.2s;
+}
+.project-card:hover { border-color: var(--accent2); transform: translateY(-2px); }
+.project-card:hover::before { opacity: 1; }
+.project-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.project-date { font-size: 11px; color: var(--muted); }
+.new-project-card {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 24px; display: flex; align-items: center;
+  justify-content: center; gap: 10px;
+  cursor: pointer; transition: all 0.2s;
+  color: var(--muted); font-size: 13px;
+}
+.new-project-card:hover { border-color: var(--accent); color: var(--accent); }
+
+/* New project modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px; width: 420px;
+  transform: scale(0.95); transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: scale(1); }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between;">
+  <div>
+    <div class="page-title">Welcome back, {{ user['name'].split()[0] }} ◈</div>
+    <div class="page-subtitle">Manage your questionnaire automation projects</div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal()">+ New Project</button>
+</div>
+
+{% if not projects %}
+<div class="card" style="text-align:center; padding:60px 24px;">
+  <div style="font-size:48px; margin-bottom:16px;">◈</div>
+  <div style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; margin-bottom:8px;">No projects yet</div>
+  <div style="color:var(--muted); font-size:13px; margin-bottom:24px;">Create a project to start automating questionnaire answers</div>
+  <button class="btn btn-primary" onclick="openModal()">Create your first project</button>
+</div>
+{% else %}
+<div class="projects-grid">
+  {% for p in projects %}
+  <a href="/project/{{ p['id'] }}" class="project-card">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);"></div>
+      <span class="badge badge-green">Active</span>
+    </div>
+    <div class="project-name">{{ p['name'] }}</div>
+    <div class="project-date">Created {{ p['created_at'][:10] }}</div>
+  </a>
+  {% endfor %}
+  <div class="new-project-card" onclick="openModal()">
+    <span style="font-size:20px;">+</span> New Project
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="modal-title">New Project</div>
+    <form method="POST" action="/project/new">
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" name="name" placeholder="e.g. HIPAA Vendor Assessment Q3" required autofocus>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn btn-primary" type="submit" style="flex:1;">Create →</button>
+        <button class="btn btn-secondary" type="button" onclick="closeModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+</script>
+{% endblock %}

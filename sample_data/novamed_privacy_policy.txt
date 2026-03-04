@@ -1,0 +1,48 @@
+NovaMed Health — Privacy & Data Handling Policy
+Version 2.4 | Last Updated: February 2025
+
+1. DATA COLLECTED
+NovaMed collects the following categories of data on behalf of its healthcare customers:
+- Protected Health Information (PHI) as defined by HIPAA
+- Patient demographic information (name, date of birth, contact details)
+- Clinical data (diagnoses, medications, lab results, imaging reports)
+- Billing and insurance information
+- System usage logs and audit trails
+
+NovaMed does not sell, license, or share PHI with third parties for marketing or advertising purposes.
+
+2. DATA PROCESSING
+NovaMed acts as a Business Associate under HIPAA. Healthcare organizations (Covered Entities) retain ownership of all PHI processed through the platform. NovaMed processes data solely for the purposes of providing contracted services and as permitted by signed Business Associate Agreements (BAAs).
+
+Data is processed in the United States only. NovaMed does not transfer PHI to servers located outside the United States.
+
+3. PATIENT RIGHTS
+Patients whose data is processed through NovaMed's platform retain all rights under HIPAA, including:
+- Right to access their medical records
+- Right to request corrections
+- Right to an accounting of disclosures
+- Right to request restrictions on disclosure
+
+Requests from patients should be directed to the applicable Covered Entity (the hospital or clinic). NovaMed will support covered entities in fulfilling patient rights requests within the timeframes required by HIPAA.
+
+4. COOKIES AND TRACKING
+The NovaMed web application uses session cookies necessary for authentication and application functionality. NovaMed does not use third-party advertising cookies. Analytics data is collected using a first-party analytics system. Customers may opt out of analytics collection by contacting their account manager.
+
+5. DATA BREACH NOTIFICATION
+In the event of a confirmed breach of unsecured PHI, NovaMed will:
+- Notify affected Covered Entities within 72 hours of discovery
+- Provide a written breach notification including: nature of the PHI involved, unauthorized persons involved, whether PHI was acquired, steps taken to mitigate harm, and steps NovaMed is taking to prevent future incidents
+- Cooperate fully with the Covered Entity's breach notification obligations to patients and HHS
+
+6. SUBPROCESSORS
+NovaMed uses the following categories of subprocessors:
+- Amazon Web Services (infrastructure and hosting)
+- Datadog (application monitoring and logging)
+- Twilio SendGrid (email delivery for notifications)
+- Stripe (billing and payment processing — no PHI)
+- Okta (identity and access management)
+
+All subprocessors are bound by BAAs where applicable and are reviewed annually for security posture.
+
+7. GDPR
+While NovaMed primarily operates in the United States and under HIPAA, it acknowledges that some customers may have obligations under GDPR for EU residents. NovaMed can execute a Data Processing Agreement (DPA) upon request. Contact legal@novamed.health for DPA requests.

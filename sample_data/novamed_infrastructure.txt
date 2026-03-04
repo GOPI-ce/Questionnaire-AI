@@ -1,0 +1,60 @@
+NovaMed Health — Technical Infrastructure & SLA Overview
+Version 1.8 | Q1 2025
+
+INFRASTRUCTURE OVERVIEW
+NovaMed Health's production infrastructure is hosted entirely on Amazon Web Services (AWS). The platform uses a multi-tier microservices architecture deployed via Kubernetes (Amazon EKS). 
+
+Primary regions: us-east-1 (N. Virginia) — production primary
+Secondary regions: us-west-2 (Oregon) — failover and DR
+
+UPTIME & SLA
+NovaMed guarantees 99.9% uptime SLA for Tier-1 services (patient intake, medical record access, data sharing APIs). This equates to a maximum of approximately 8.7 hours of downtime per year.
+Planned maintenance windows are scheduled between 2:00 AM – 4:00 AM EST on Sundays and communicated to customers at least 72 hours in advance via the NovaMed Status Page (status.novamed.health).
+Historical uptime for 2024: 99.97%.
+
+COMPUTE & STORAGE
+- Application layer: AWS EKS, auto-scaling groups (min 3, max 20 nodes per region)
+- Database: Amazon RDS for PostgreSQL (Multi-AZ, with read replicas)
+- Object storage: Amazon S3 with versioning enabled, cross-region replication active
+- CDN: Amazon CloudFront for static assets
+- Caching: Amazon ElastiCache (Redis)
+
+NETWORKING
+- All inter-service communication occurs over private VPC subnets
+- Public-facing endpoints are protected by AWS WAF (Web Application Firewall) and AWS Shield Standard for DDoS protection
+- NovaMed uses AWS PrivateLink for connections to AWS managed services
+- Egress filtering enforced via AWS Network Firewall
+
+LOGGING & MONITORING
+- Centralized logging via Datadog with 90-day hot retention and 1-year cold archive
+- Application performance monitoring (APM) via Datadog
+- Security event monitoring via AWS Security Hub and GuardDuty
+- PagerDuty used for on-call alerting; P1 incidents trigger response within 15 minutes
+- All access to PHI is logged and auditable
+
+BACKUP & RECOVERY
+- Database: Automated daily snapshots, point-in-time recovery (PITR) enabled (35-day window)
+- Object storage: S3 versioning + cross-region replication
+- Application configuration: stored in version-controlled infrastructure-as-code (Terraform)
+- Recovery Time Objective (RTO): 4 hours
+- Recovery Point Objective (RPO): 1 hour
+- DR drills: conducted every 6 months (last drill: November 2024)
+
+CHANGE MANAGEMENT
+- All infrastructure changes go through Terraform plan/apply workflow with mandatory peer review
+- Application deployments use blue-green strategy with automated rollback on health check failure
+- Emergency change process defined for critical security patches (P1 changes can bypass standard review with CISO approval)
+
+API SPECIFICATIONS
+- REST API, versioned (current stable: v3)
+- API authentication via OAuth 2.0 with PKCE flow
+- Rate limits: 1,000 requests/minute per client (configurable for enterprise)
+- Webhooks available for real-time event notification
+- OpenAPI 3.0 specification available in the developer portal
+- SDK availability: Python, JavaScript/TypeScript, Java
+
+SUPPORT
+- Standard support: business hours M–F 8AM–6PM EST, response within 4 hours
+- Priority support (Enterprise): 24/7, P1 response within 1 hour
+- Support channels: ticketing system (support.novamed.health), email, phone for Enterprise
+- Dedicated Customer Success Manager assigned to accounts > 500 beds

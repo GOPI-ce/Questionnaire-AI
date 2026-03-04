@@ -1,0 +1,35 @@
+NovaMed Health — Vendor Security Assessment Questionnaire
+Submitted by: Midwest Regional Health System
+Date: March 2025
+
+Instructions: Please answer each question based on your current security posture and practices. Attach supporting documentation where applicable.
+
+1. What encryption standards does your platform use for data in transit and data at rest?
+
+2. Does your platform comply with HIPAA? Do you hold any third-party security certifications (e.g., SOC 2, HITRUST, ISO 27001)?
+
+3. How do you handle access control for your employees and for customers accessing the system?
+
+4. What is your process for detecting and responding to security vulnerabilities?
+
+5. What is your incident response procedure in the event of a data breach involving PHI?
+
+6. What are your uptime SLA commitments, and what was your actual historical uptime in 2024?
+
+7. Where is customer data stored geographically? Is any data processed or transferred outside the United States?
+
+8. How frequently do you perform penetration testing and security assessments?
+
+9. What are your backup and disaster recovery capabilities? Please include RTO and RPO targets.
+
+10. How do you manage third-party vendors and subprocessors who may have access to PHI?
+
+11. Do you support GDPR compliance requirements for EU data subjects?
+
+12. What logging and audit trail capabilities does your platform provide?
+
+13. What happens to our data if we terminate our contract with you?
+
+14. Do you sell or share patient data with third parties for marketing or advertising purposes?
+
+15. What support options are available, and what are your response time commitments?

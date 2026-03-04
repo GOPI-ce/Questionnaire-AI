@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}Review Answers — QuestionnaireAI{% endblock %}
+
+{% block extra_head %}
+<style>
+.summary-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.stat-num { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.q-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  transition: border-color 0.15s;
+}
+.q-card:hover { border-color: rgba(79,255,176,0.2); }
+.q-card.not-found { border-color: rgba(255,107,107,0.25); }
+.q-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 14px;
+}
+.q-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px; font-weight: 700;
+  color: var(--accent); letter-spacing: 0.1em;
+  text-transform: uppercase; white-space: nowrap;
+  margin-top: 2px;
+}
+.q-text { font-size: 14px; font-weight: 500; flex: 1; line-height: 1.5; }
+.q-body { font-size: 13px; color: var(--text); }
+
+.answer-display { 
+  padding: 12px 14px;
+  background: var(--surface2); border-radius: 8px;
+  font-size: 13px; line-height: 1.6;
+  min-height: 60px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.answer-display:hover { border-color: var(--border); }
+.answer-display.editing { display: none; }
+
+.answer-edit {
+  display: none; width: 100%;
+  background: var(--surface2); border: 1px solid var(--accent);
+  border-radius: 8px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  padding: 12px 14px; resize: vertical;
+  min-height: 80px; line-height: 1.6;
+}
+.answer-edit.active { display: block; }
+
+.edit-actions { margin-top: 8px; display: none; gap: 8px; }
+.edit-actions.active { display: flex; }
+
+.meta-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 12px; flex-wrap: wrap;
+}
+.conf-block { display: flex; align-items: center; gap: 8px; }
+.conf-bar { width: 80px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 2px; }
+
+.citation-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; background: rgba(124,110,247,0.12);
+  border: 1px solid rgba(124,110,247,0.25);
+  border-radius: 20px; font-size: 11px; color: var(--accent2);
+}
+
+.evidence-block {
+  margin-top: 12px; padding: 10px 14px;
+  background: rgba(107,114,128,0.06);
+  border-left: 2px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  font-size: 11px; color: var(--muted);
+  line-height: 1.5; font-style: italic;
+  display: none;
+}
+.evidence-block.open { display: block; }
+
+.toolbar {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 12px 0; margin-bottom: 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.toolbar-left { display: flex; align-items: center; gap: 10px; }
+
+.not-found-text { color: var(--accent3); font-style: italic; }
+
+/* Regenerate modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px; width: 460px;
+  transform: scale(0.95); transition: transform 0.2s;
+  max-height: 80vh; overflow-y: auto;
+}
+.modal-overlay.open .modal { transform: scale(1); }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.regen-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border-radius: 6px; margin-bottom: 6px; }
+.regen-item:hover { background: var(--surface2); }
+.regen-item label { cursor: pointer; font-size: 13px; line-height: 1.4; }
+input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; margin-top: 2px; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:12px;">
+  <a href="/project/{{ project['id'] }}" style="font-size:12px; color:var(--muted); text-decoration:none;">← {{ project['name'] }}</a>
+</div>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700;">{{ run['filename'] }}</div>
+    {% if run['status'] == 'done' %}
+      <span class="badge badge-green">Completed</span>
+    {% else %}
+      <span class="badge badge-yellow">{{ run['status'] }}</span>
+    {% endif %}
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-secondary btn-sm" onclick="openRegenModal()">↺ Regenerate Selected</button>
+    <a href="/run/{{ run['id'] }}/export" class="btn btn-primary btn-sm">⬇ Export DOCX</a>
+  </div>
+</div>
+
+<!-- Summary stats -->
+<div class="summary-bar">
+  <div class="stat-card">
+    <div class="stat-num">{{ total }}</div>
+    <div class="stat-label">Total Questions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--accent);">{{ answered }}</div>
+    <div class="stat-label">Answered w/ Citations</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--accent3);">{{ not_found }}</div>
+    <div class="stat-label">Not Found</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--accent2);">{{ ((answered/total)*100)|int if total else 0 }}%</div>
+    <div class="stat-label">Coverage Rate</div>
+  </div>
+</div>
+
+<!-- Questions -->
+{% for q in questions %}
+{% set is_not_found = q['answer'] == 'Not found in references.' or not q['answer'] %}
+{% set display_answer = q['edited_answer'] or q['answer'] or 'Not found in references.' %}
+{% set conf = q['confidence'] or 0 %}
+{% set conf_pct = (conf * 100)|int %}
+
+<div class="q-card {% if is_not_found %}not-found{% endif %}" id="qcard-{{ q['id'] }}">
+  <div class="q-header">
+    <span class="q-num">Q{{ q['question_number'] }}</span>
+    <span class="q-text">{{ q['question_text'] }}</span>
+    {% if q['edited_answer'] %}
+      <span class="badge badge-yellow" title="Manually edited">edited</span>
+    {% elif not is_not_found %}
+      <span class="badge badge-green">✓</span>
+    {% else %}
+      <span class="badge badge-red">Not found</span>
+    {% endif %}
+  </div>
+
+  <div class="q-body">
+    <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">ANSWER — click to edit</div>
+    <div class="answer-display {% if q['edited_answer'] %}edited{% endif %}"
+         id="display-{{ q['id'] }}"
+         onclick="startEdit({{ q['id'] }})">
+      <span class="{% if is_not_found %}not-found-text{% endif %}">{{ display_answer }}</span>
+    </div>
+    <textarea class="answer-edit" id="edit-{{ q['id'] }}">{{ display_answer }}</textarea>
+    <div class="edit-actions" id="actions-{{ q['id'] }}">
+      <button class="btn btn-primary btn-sm" onclick="saveEdit({{ q['id'] }})">Save</button>
+      <button class="btn btn-secondary btn-sm" onclick="cancelEdit({{ q['id'] }})">Cancel</button>
+    </div>
+
+    <div class="meta-row">
+      {% if not is_not_found and conf > 0 %}
+      <div class="conf-block">
+        <span style="font-size:11px; color:var(--muted);">Confidence</span>
+        <div class="conf-bar">
+          <div class="conf-fill" style="width:{{ conf_pct }}%; background: {% if conf_pct >= 70 %}var(--accent){% elif conf_pct >= 40 %}var(--warning){% else %}var(--accent3){% endif %};"></div>
+        </div>
+        <span style="font-size:11px; color:var(--muted);">{{ conf_pct }}%</span>
+      </div>
+      {% endif %}
+
+      {% if q['citations'] %}
+        {% set cits = q['citations']|fromjson %}
+        {% for c in cits %}
+          <span class="citation-pill">📄 {{ c }}</span>
+        {% endfor %}
+      {% endif %}
+
+      {% if q['evidence_snippet'] %}
+      <button class="btn btn-secondary btn-sm" onclick="toggleEvidence({{ q['id'] }})">
+        <span id="snip-toggle-{{ q['id'] }}">+ Evidence</span>
+      </button>
+      {% endif %}
+    </div>
+
+    {% if q['evidence_snippet'] %}
+    <div class="evidence-block" id="evidence-{{ q['id'] }}">
+      "{{ q['evidence_snippet'][:400] }}{% if q['evidence_snippet']|length > 400 %}…{% endif %}"
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- Regenerate Modal -->
+<div class="modal-overlay" id="regen-modal" onclick="if(event.target===this)closeRegenModal()">
+  <div class="modal">
+    <div class="modal-title">↺ Regenerate Selected Questions</div>
+    <div style="font-size:12px; color:var(--muted); margin-bottom:16px;">Select questions to regenerate answers for:</div>
+    {% for q in questions %}
+    <div class="regen-item">
+      <input type="checkbox" id="rq-{{ q['id'] }}" value="{{ q['id'] }}">
+      <label for="rq-{{ q['id'] }}">Q{{ q['question_number'] }}. {{ q['question_text'][:100] }}{% if q['question_text']|length > 100 %}…{% endif %}</label>
+    </div>
+    {% endfor %}
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button class="btn btn-primary" onclick="regenSelected()" style="flex:1;" id="regen-btn">↺ Regenerate</button>
+      <button class="btn btn-secondary" onclick="closeRegenModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const runId = {{ run['id'] }};
+
+// ── Edit answers ────────────────────────────────────────────────────────
+function startEdit(qid) {
+  document.getElementById('display-' + qid).classList.add('editing');
+  document.getElementById('edit-' + qid).classList.add('active');
+  document.getElementById('actions-' + qid).classList.add('active');
+}
+
+function cancelEdit(qid) {
+  document.getElementById('display-' + qid).classList.remove('editing');
+  document.getElementById('edit-' + qid).classList.remove('active');
+  document.getElementById('actions-' + qid).classList.remove('active');
+}
+
+async function saveEdit(qid) {
+  const text = document.getElementById('edit-' + qid).value.trim();
+  try {
+    const res = await fetch(`/run/${runId}/edit_answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_id: qid, answer: text })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error('Save failed');
+    // Update display
+    const display = document.getElementById('display-' + qid);
+    display.innerHTML = `<span>${text}</span>`;
+    cancelEdit(qid);
+    showToast('Answer saved');
+  } catch(e) {
+    showToast('Save failed', 'error');
+  }
+}
+
+// ── Evidence toggle ─────────────────────────────────────────────────────
+function toggleEvidence(qid) {
+  const el = document.getElementById('evidence-' + qid);
+  const btn = document.getElementById('snip-toggle-' + qid);
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? '− Evidence' : '+ Evidence';
+}
+
+// ── Regenerate modal ────────────────────────────────────────────────────
+function openRegenModal() { document.getElementById('regen-modal').classList.add('open'); }
+function closeRegenModal() { document.getElementById('regen-modal').classList.remove('open'); }
+
+async function regenSelected() {
+  const checked = [...document.querySelectorAll('input[id^="rq-"]:checked')].map(el => parseInt(el.value));
+  if (!checked.length) { showToast('Select at least one question', 'error'); return; }
+  const btn = document.getElementById('regen-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Regenerating…';
+  try {
+    const res = await fetch(`/run/${runId}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_ids: checked })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showToast('Answers regenerated! Refreshing…');
+    setTimeout(() => location.reload(), 1200);
+  } catch(e) {
+    showToast('Regeneration failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '↺ Regenerate';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% block title %}{{ project['name'] }} — QuestionnaireAI{% endblock %}
+
+{% block extra_head %}
+<style>
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .doc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .doc-icon {
+    font-size: 16px;
+  }
+
+  .run-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+
+  .run-item:hover {
+    background: #212639;
+  }
+
+  .run-cb {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .delete-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 4px;
+    margin-bottom: 12px;
+  }
+
+  .delete-bar.visible {
+    display: flex;
+  }
+
+  .select-all-label {
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .progress-track {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px;
+    transition: width 0.4s;
+    width: 0%;
+  }
+
+  #generate-section {
+    margin-top: 20px;
+  }
+
+  .gen-status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between;">
+  <div>
+    <a href="/dashboard" style="font-size:12px; color:var(--muted); text-decoration:none;">← Dashboard</a>
+    <div class="page-title" style="margin-top:8px;">{{ project['name'] }}</div>
+    <div class="page-subtitle">Configure reference documents and run AI answering</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <!-- Reference Docs -->
+  <div class="card">
+    <div class="card-title">📚 Reference Documents</div>
+    <div class="dropzone" id="ref-drop" onclick="document.getElementById('ref-input').click()">
+      <div class="dropzone-icon">⬆</div>
+      <div class="dropzone-text"><strong>Drop files here</strong> or click to upload</div>
+      <div class="dropzone-text" style="margin-top:4px;">PDF, DOCX, TXT supported</div>
+    </div>
+    <input type="file" id="ref-input" multiple accept=".pdf,.docx,.txt" class="hidden">
+    <div class="doc-list" id="ref-list">
+      {% for d in ref_docs %}
+      <div class="doc-item">
+        <span class="doc-icon">📄</span>
+        <span style="flex:1;">{{ d['filename'] }}</span>
+        <span class="badge badge-green">Indexed</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Questionnaire Upload -->
+  <div class="card">
+    <div class="card-title">📋 Questionnaire</div>
+    <div class="dropzone" id="q-drop" onclick="document.getElementById('q-input').click()">
+      <div class="dropzone-icon">📤</div>
+      <div class="dropzone-text"><strong>Upload questionnaire</strong></div>
+      <div class="dropzone-text" style="margin-top:4px;">PDF, DOCX, TXT — numbered questions</div>
+    </div>
+    <input type="file" id="q-input" accept=".pdf,.docx,.txt" class="hidden">
+    <div id="q-status" style="margin-top:12px;"></div>
+
+    <div id="generate-section" class="hidden">
+      <div style="border-top: 1px solid var(--border); padding-top:16px;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:10px;" id="q-info"></div>
+        <button class="btn btn-primary" id="gen-btn" onclick="generateAnswers()">
+          ⚡ Generate Answers
+        </button>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="gen-status" id="gen-status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Previous Runs -->
+<div class="card">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+    <div class="card-title" style="margin-bottom:0;">📁 Previous Runs</div>
+    {% if runs %}
+    <button class="btn btn-secondary btn-sm" onclick="toggleSelectMode()" id="select-btn">☑ Select</button>
+    {% endif %}
+  </div>
+
+  {% if not runs %}
+  <div style="color:var(--muted); font-size:13px; text-align:center; padding:20px;">No runs yet. Upload a questionnaire
+    above.</div>
+  {% else %}
+
+  <!-- Delete bar (shown when selecting) -->
+  <div class="delete-bar" id="delete-bar">
+    <label class="select-all-label">
+      <input type="checkbox" class="run-cb" id="select-all" onchange="toggleSelectAll(this)"> Select all
+    </label>
+    <button class="btn btn-danger btn-sm" id="delete-btn" onclick="deleteSelected()" disabled>🗑 Delete
+      Selected</button>
+  </div>
+
+  <div id="runs-list">
+    {% for r in runs %}
+    <div class="run-item" id="run-row-{{ r['id'] }}">
+      <input type="checkbox" class="run-cb run-check hidden" value="{{ r['id'] }}" onchange="onCheckChange()">
+      <a href="/run/{{ r['id'] }}"
+        style="flex:1; display:flex; align-items:center; justify-content:space-between; text-decoration:none; color:var(--text);">
+        <div>
+          <div style="font-size:13px; font-weight:500;">{{ r['filename'] }}</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:2px;">{{ r['created_at'][:16] }}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          {% if r['status'] == 'done' %}
+          <span class="badge badge-green">Done</span>
+          {% elif r['status'] == 'generating' %}
+          <span class="badge badge-yellow">Generating…</span>
+          {% else %}
+          <span class="badge badge-purple">Pending</span>
+          {% endif %}
+          <span style="color:var(--muted);" class="run-arrow">→</span>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const projectId = {{ project['id'] }};
+  let currentRunId = null;
+
+  // ── Reference doc upload ─────────────────────────────────────────────────
+  const refDrop = document.getElementById('ref-drop');
+  const refInput = document.getElementById('ref-input');
+
+  refDrop.addEventListener('dragover', e => { e.preventDefault(); refDrop.classList.add('dragover'); });
+  refDrop.addEventListener('dragleave', () => refDrop.classList.remove('dragover'));
+  refDrop.addEventListener('drop', e => {
+    e.preventDefault(); refDrop.classList.remove('dragover');
+    uploadRefFiles(e.dataTransfer.files);
+  });
+  refInput.addEventListener('change', () => uploadRefFiles(refInput.files));
+
+  async function uploadRefFiles(files) {
+    if (!files.length) return;
+    const fd = new FormData();
+    for (const f of files) fd.append('files', f);
+    refDrop.innerHTML = '<div class="spinner"></div><div style="font-size:12px;color:var(--muted);margin-top:8px;">Uploading…</div>';
+    try {
+      const res = await fetch(`/project/${projectId}/upload_ref`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      data.added.forEach(fname => {
+        const el = document.createElement('div');
+        el.className = 'doc-item';
+        el.innerHTML = `<span class="doc-icon">📄</span><span style="flex:1;">${fname}</span><span class="badge badge-green">Indexed</span>`;
+        document.getElementById('ref-list').appendChild(el);
+      });
+      showToast(`${data.added.length} document(s) indexed`);
+    } catch (e) { showToast('Upload failed: ' + e.message, 'error'); }
+    refDrop.innerHTML = `<div class="dropzone-icon">⬆</div><div class="dropzone-text"><strong>Drop more files</strong> or click</div>`;
+  }
+
+  // ── Questionnaire upload ──────────────────────────────────────────────────
+  const qDrop = document.getElementById('q-drop');
+  const qInput = document.getElementById('q-input');
+
+  qDrop.addEventListener('dragover', e => { e.preventDefault(); qDrop.classList.add('dragover'); });
+  qDrop.addEventListener('dragleave', () => qDrop.classList.remove('dragover'));
+  qDrop.addEventListener('drop', e => {
+    e.preventDefault(); qDrop.classList.remove('dragover');
+    uploadQuestionnaire(e.dataTransfer.files[0]);
+  });
+  qInput.addEventListener('change', () => uploadQuestionnaire(qInput.files[0]));
+
+  async function uploadQuestionnaire(file) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    qDrop.innerHTML = '<div class="spinner"></div><div style="font-size:12px;color:var(--muted);margin-top:8px;">Parsing questions…</div>';
+    try {
+      const res = await fetch(`/project/${projectId}/upload_questionnaire`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      currentRunId = data.run_id;
+      document.getElementById('q-info').textContent = `✓ ${data.question_count} questions parsed from "${file.name}"`;
+      document.getElementById('generate-section').classList.remove('hidden');
+      showToast(`Questionnaire parsed: ${data.question_count} questions`);
+    } catch (e) { showToast('Parse failed: ' + e.message, 'error'); }
+    qDrop.innerHTML = `<div class="dropzone-icon">📤</div><div class="dropzone-text"><strong>Upload questionnaire</strong></div>`;
+  }
+
+  // ── Generate answers ──────────────────────────────────────────────────────
+  async function generateAnswers() {
+    if (!currentRunId) return;
+    const btn = document.getElementById('gen-btn');
+    const status = document.getElementById('gen-status');
+    const prog = document.getElementById('progress-fill');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating…';
+    prog.style.width = '30%';
+    status.textContent = 'Sending questions to Claude…';
+    try {
+      const res = await fetch(`/run/${currentRunId}/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      prog.style.width = '100%';
+      status.textContent = '✓ Done! Redirecting to review…';
+      setTimeout(() => window.location.href = `/run/${currentRunId}`, 1000);
+    } catch (e) {
+      status.textContent = 'Error: ' + e.message;
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Retry';
+      showToast('Generation failed: ' + e.message, 'error');
+    }
+  }
+
+  // ── Select / Delete runs ──────────────────────────────────────────────────
+  let selectMode = false;
+
+  function toggleSelectMode() {
+    selectMode = !selectMode;
+    const checks = document.querySelectorAll('.run-check');
+    const deleteBar = document.getElementById('delete-bar');
+    const selectBtn = document.getElementById('select-btn');
+    const arrows = document.querySelectorAll('.run-arrow');
+
+    checks.forEach(c => { c.classList.toggle('hidden', !selectMode); c.checked = false; });
+    arrows.forEach(a => a.classList.toggle('hidden', selectMode));
+    deleteBar.classList.toggle('visible', selectMode);
+    selectBtn.textContent = selectMode ? '✕ Cancel' : '☑ Select';
+    document.getElementById('select-all').checked = false;
+    document.getElementById('delete-btn').disabled = true;
+  }
+
+  function toggleSelectAll(master) {
+    document.querySelectorAll('.run-check').forEach(c => c.checked = master.checked);
+    onCheckChange();
+  }
+
+  function onCheckChange() {
+    const any = [...document.querySelectorAll('.run-check')].some(c => c.checked);
+    document.getElementById('delete-btn').disabled = !any;
+    const all = [...document.querySelectorAll('.run-check')].every(c => c.checked);
+    document.getElementById('select-all').checked = all;
+  }
+
+  async function deleteSelected() {
+    const ids = [...document.querySelectorAll('.run-check:checked')].map(c => parseInt(c.value));
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} run(s)? This cannot be undone.`)) return;
+
+    const deleteBtn = document.getElementById('delete-btn');
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<span class="spinner"></span> Deleting…';
+
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/run/${id}/delete`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById(`run-row-${id}`).remove();
+          deleted++;
+        }
+      } catch (e) { /* skip */ }
+    }
+
+    showToast(`${deleted} run(s) deleted`);
+    deleteBtn.innerHTML = '🗑 Delete Selected';
+
+    // If no runs left, reload to show empty state
+    if (!document.querySelectorAll('.run-check').length) location.reload();
+    else toggleSelectMode();
+  }
+</script>
+{% endblock %}
