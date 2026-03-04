@@ -1,3 +1,10 @@
+Available at your primary URL https://questionnaire-ai-yq4j.onrender.com
+
+Here is the live link, 
+
+once done , upload the three files, .txt and questionar AI file 
+
+
 # QuestionnaireAI
 
 Built for the Almabase GTM Engineering Internship assignment.
