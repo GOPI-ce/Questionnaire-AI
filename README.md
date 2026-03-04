@@ -91,5 +91,3 @@ The tradeoff is semantic matching — something like "breach notification SLA" n
 - Team sharing on projects
 
 ---
-
-*Built by Gopichand Konakanchi*
